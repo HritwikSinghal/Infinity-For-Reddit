@@ -1,5 +1,5 @@
 # Tasks
-Implementing GraphQL support in this repo (`gql` branch). See `doc/GRAPHQL.md` for full plan.
+Implementing GraphQL support in this repo (`gql` branch). See `docs/GRAPHQL.md` for full plan.
 
 ## Completed
 

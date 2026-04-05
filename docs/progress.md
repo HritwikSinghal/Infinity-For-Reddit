@@ -2,7 +2,7 @@
 > Last updated: 2026-04-06 | Session: 3
 
 ## Overview
-Implementing GraphQL (GQL) support directly in this repo on the `gql` branch. Reddit's paid API changes broke REST for authenticated operations. GQL is added via `gql-fed.reddit.com` using a dual-path architecture: authenticated users route through GQL, anonymous users continue using REST `.json` endpoints. No new library dependencies -- GQL is implemented via manual JSON request/response construction over Retrofit. Full plan: `doc/GRAPHQL.md`.
+Implementing GraphQL (GQL) support directly in this repo on the `gql` branch. Reddit's paid API changes broke REST for authenticated operations. GQL is added via `gql-fed.reddit.com` using a dual-path architecture: authenticated users route through GQL, anonymous users continue using REST `.json` endpoints. No new library dependencies -- GQL is implemented via manual JSON request/response construction over Retrofit. Full plan: `docs/GRAPHQL.md`.
 
 **Active project path:** `/home/hritwik/Projects/Infinity-For-Reddit`
 
