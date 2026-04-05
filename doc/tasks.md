@@ -12,13 +12,13 @@ Porting GraphQL support from fork (`~/Projects/Infinity-For-Reddit`) into this r
 ## Layer 3: Parsers — GQL Parsing Methods
 
 ### 3.1 — `post/ParsePost.java`
-- [x] Add `parsePostsSyncGQL()` — parses `data.postFeed.elements.edges[]` or `data.search.general.posts.edges[]`
-- [x] Add `getLastItemGQL()` — cursor from `pageInfo.endCursor`/`hasNextPage`
-- [x] Add `parseBasicDataGQL()` — GQL field mapping (see fork line 351-502)
-- [x] Add `parseDataGQL()` — post type via `isSelfPost`/`postHint` instead of URL heuristics (see fork line 968-1231)
-- [x] Add `setText()` helper — `content.markdown`/`content.html`
-- [x] Add `insertImages()` — resolves `![img](id)` references via `richtextMedia` array
-- [x] Add `getUnixTime()` — ISO8601 → unix millis
+- [ ] Add `parsePostsSyncGQL()` — parses `data.postFeed.elements.edges[]` or `data.search.general.posts.edges[]`
+- [ ] Add `getLastItemGQL()` — cursor from `pageInfo.endCursor`/`hasNextPage`
+- [ ] Add `parseBasicDataGQL()` — GQL field mapping (see fork line 351-502)
+- [ ] Add `parseDataGQL()` — post type via `isSelfPost`/`postHint` instead of URL heuristics (see fork line 968-1231)
+- [ ] Add `setText()` helper — `content.markdown`/`content.html`
+- [ ] Add `insertImages()` — resolves `![img](id)` references via `richtextMedia` array
+- [ ] Add `getUnixTime()` — ISO8601 → unix millis
 - **Reference:** Fork file `~/Projects/.../post/ParsePost.java` lines 77-1322
 
 ### 3.2 — `comment/ParseComment.java`

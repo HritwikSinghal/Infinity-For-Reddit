@@ -448,6 +448,15 @@ public class Comment implements Parcelable {
         assertChildrenDepth();
     }
 
+    public void addChildEnd(Comment comment) {
+        if (children == null) {
+            children = new ArrayList<>();
+        }
+        children.add(comment);
+        childCount++;
+        assertChildrenDepth();
+    }
+
     private void assertChildrenDepth() {
         if (BuildConfig.DEBUG) {
             for (Comment child: children) {
@@ -464,6 +473,13 @@ public class Comment implements Parcelable {
 
     public void setMoreChildrenIds(ArrayList<String> moreChildrenIds) {
         this.moreChildrenIds = moreChildrenIds;
+    }
+
+    public void addMoreChildrenId(String id) {
+        if (moreChildrenIds == null) {
+            moreChildrenIds = new ArrayList<>();
+        }
+        moreChildrenIds.add(id);
     }
 
     public boolean hasMoreChildrenIds() {
