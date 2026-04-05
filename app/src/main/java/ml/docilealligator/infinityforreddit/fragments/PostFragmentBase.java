@@ -113,6 +113,9 @@ public abstract class PostFragmentBase extends Fragment {
     @Named("oauth")
     protected Retrofit mOauthRetrofit;
     @Inject
+    @Named("gql")
+    protected Retrofit mGqlRetrofit;
+    @Inject
     @Named("default")
     protected SharedPreferences mSharedPreferences;
     @Inject

@@ -205,7 +205,7 @@ public class HistoryPostFragment extends PostFragmentBase implements FragmentCom
         postLayout = mPostLayoutSharedPreferences.getInt(SharedPreferencesUtils.HISTORY_POST_LAYOUT_READ_POST, defaultPostLayout);
 
         mAdapter = new PostRecyclerViewAdapter(mActivity, this, mRedditDataRoomDatabase, mExecutor,
-                mOauthRetrofit, mRedgifsRetrofit, mStreamableApiProvider, mCustomThemeWrapper, locale,
+                mOauthRetrofit, mGqlRetrofit, mRedgifsRetrofit, mStreamableApiProvider, mCustomThemeWrapper, locale,
                 mActivity.accessToken, mActivity.accountName, PostType.READ_POSTS, postLayout, true,
                 mSharedPreferences, mCurrentAccountSharedPreferences, mNsfwAndSpoilerSharedPreferences,
                 null, mExoCreator, new PostRecyclerViewAdapter.Callback() {

@@ -5,11 +5,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.json.JSONObject;
 
-import ml.docilealligator.infinityforreddit.apis.RedditAPI;
+import ml.docilealligator.infinityforreddit.apis.GqlAPI;
+import ml.docilealligator.infinityforreddit.apis.GqlRequestBody;
 import ml.docilealligator.infinityforreddit.utils.APIUtils;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Retrofit;
@@ -20,21 +21,37 @@ import retrofit2.Retrofit;
 
 public class VoteThing {
 
-    public static void voteThing(Context context, final Retrofit retrofit, String accessToken,
+    public static boolean isPost(String id) {
+        return id.startsWith("t3_");
+    }
+
+    public static void voteThing(Context context, final Retrofit gqlRetrofit, String accessToken,
                                  final VoteThingListener voteThingListener, final String fullName,
                                  final String point, final int position) {
-        RedditAPI api = retrofit.create(RedditAPI.class);
+        GqlAPI api = gqlRetrofit.create(GqlAPI.class);
+        Call<String> voteThingCall;
 
-        Map<String, String> params = new HashMap<>();
-        params.put(APIUtils.DIR_KEY, point);
-        params.put(APIUtils.ID_KEY, fullName);
-        params.put(APIUtils.RANK_KEY, APIUtils.RANK);
+        if (isPost(fullName)) {
+            RequestBody body = GqlRequestBody.updatePostVoteStateBody(fullName, point);
+            voteThingCall = api.updatePostVoteState(APIUtils.getOAuthHeader(accessToken), body);
+        } else {
+            RequestBody body = GqlRequestBody.updateCommentVoteStateBody(fullName, point);
+            voteThingCall = api.updateCommentVoteState(APIUtils.getOAuthHeader(accessToken), body);
+        }
 
-        Call<String> voteThingCall = api.voteThing(APIUtils.getOAuthHeader(accessToken), params);
         voteThingCall.enqueue(new Callback<String>() {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull retrofit2.Response<String> response) {
                 if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(response.body());
+                        if (!json.isNull("errors")) {
+                            voteThingListener.onVoteThingFail(position);
+                            Toast.makeText(context, json.getJSONArray("errors").getJSONObject(0).getString("message"), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
                     voteThingListener.onVoteThingSuccess(position);
                 } else {
                     voteThingListener.onVoteThingFail(position);
@@ -50,21 +67,33 @@ public class VoteThing {
         });
     }
 
-    public static void voteThing(Context context, final Retrofit retrofit, String accessToken,
+    public static void voteThing(Context context, final Retrofit gqlRetrofit, String accessToken,
                                  final VoteThingWithoutPositionListener voteThingWithoutPositionListener,
                                  final String fullName, final String point) {
-        RedditAPI api = retrofit.create(RedditAPI.class);
+        GqlAPI api = gqlRetrofit.create(GqlAPI.class);
+        Call<String> voteThingCall;
 
-        Map<String, String> params = new HashMap<>();
-        params.put(APIUtils.DIR_KEY, point);
-        params.put(APIUtils.ID_KEY, fullName);
-        params.put(APIUtils.RANK_KEY, APIUtils.RANK);
+        if (isPost(fullName)) {
+            RequestBody body = GqlRequestBody.updatePostVoteStateBody(fullName, point);
+            voteThingCall = api.updatePostVoteState(APIUtils.getOAuthHeader(accessToken), body);
+        } else {
+            RequestBody body = GqlRequestBody.updateCommentVoteStateBody(fullName, point);
+            voteThingCall = api.updateCommentVoteState(APIUtils.getOAuthHeader(accessToken), body);
+        }
 
-        Call<String> voteThingCall = api.voteThing(APIUtils.getOAuthHeader(accessToken), params);
         voteThingCall.enqueue(new Callback<String>() {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull retrofit2.Response<String> response) {
                 if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(response.body());
+                        if (!json.isNull("errors")) {
+                            voteThingWithoutPositionListener.onVoteThingFail();
+                            Toast.makeText(context, json.getJSONArray("errors").getJSONObject(0).getString("message"), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
                     voteThingWithoutPositionListener.onVoteThingSuccess();
                 } else {
                     voteThingWithoutPositionListener.onVoteThingFail();
