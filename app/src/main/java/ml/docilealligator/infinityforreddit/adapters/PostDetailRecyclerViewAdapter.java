@@ -153,6 +153,7 @@ public class PostDetailRecyclerViewAdapter extends RecyclerView.Adapter<Recycler
     private final Executor mExecutor;
     private final Retrofit mRetrofit;
     private final Retrofit mOauthRetrofit;
+    private final Retrofit mGqlRetrofit;
     private final Retrofit mRedgifsRetrofit;
     private final Provider<StreamableAPI> mStreamableApiProvider;
     private final RedditDataRoomDatabase mRedditDataRoomDatabase;
@@ -237,7 +238,7 @@ public class PostDetailRecyclerViewAdapter extends RecyclerView.Adapter<Recycler
 
     public PostDetailRecyclerViewAdapter(@NonNull BaseActivity activity, ViewPostDetailFragment fragment,
                                          Executor executor, CustomThemeWrapper customThemeWrapper,
-                                         Retrofit oauthRetrofit, Retrofit retrofit,
+                                         Retrofit oauthRetrofit, Retrofit gqlRetrofit, Retrofit retrofit,
                                          Retrofit redgifsRetrofit, Provider<StreamableAPI> streamableApiProvider,
                                          RedditDataRoomDatabase redditDataRoomDatabase, RequestManager glide,
                                          boolean separatePostAndComments, @Nullable String accessToken,
@@ -254,6 +255,7 @@ public class PostDetailRecyclerViewAdapter extends RecyclerView.Adapter<Recycler
         mExecutor = executor;
         mRetrofit = retrofit;
         mOauthRetrofit = oauthRetrofit;
+        mGqlRetrofit = gqlRetrofit;
         mRedgifsRetrofit = redgifsRetrofit;
         mStreamableApiProvider = streamableApiProvider;
         mRedditDataRoomDatabase = redditDataRoomDatabase;
@@ -1421,7 +1423,7 @@ public class PostDetailRecyclerViewAdapter extends RecyclerView.Adapter<Recycler
                     }
                 }
 
-                VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingWithoutPositionListener() {
+                VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingWithoutPositionListener() {
                     @Override
                     public void onVoteThingSuccess() {
                         if (newVoteType.equals(APIUtils.DIR_UPVOTE)) {
@@ -1518,7 +1520,7 @@ public class PostDetailRecyclerViewAdapter extends RecyclerView.Adapter<Recycler
                     }
                 }
 
-                VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingWithoutPositionListener() {
+                VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingWithoutPositionListener() {
                     @Override
                     public void onVoteThingSuccess() {
                         if (newVoteType.equals(APIUtils.DIR_DOWNVOTE)) {

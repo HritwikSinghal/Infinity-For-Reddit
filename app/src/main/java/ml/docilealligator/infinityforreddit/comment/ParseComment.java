@@ -257,13 +257,14 @@ public class ParseComment {
         int actualCommentLength;
 
         if (!last.isNull("more")) {
-            moreChildrenIds.add(last.getJSONObject("more").getString("cursor"));
+            String cursor = last.getJSONObject("more").getString("cursor");
             actualCommentLength = comments.length() - 1;
 
-            if (moreChildrenIds.isEmpty() && !comments.getJSONObject(comments.length() - 1).isNull("more")) {
+            if (moreChildrenIds.isEmpty()) {
                 newCommentData.add(new Comment(last.getString("parentId"), last.getInt(JSONUtils.DEPTH_KEY), Comment.PLACEHOLDER_CONTINUE_THREAD));
                 return;
             }
+            moreChildrenIds.add(cursor);
         } else {
             actualCommentLength = comments.length();
         }
@@ -433,7 +434,7 @@ public class ParseComment {
                 }
             }
         }
-        String authorFlair = authorFlairObj == null ? "" : authorFlairObj.getString("text");
+        String authorFlair = (authorFlairObj == null || authorFlairObj.isNull("text")) ? "" : authorFlairObj.getString("text");
 
         String linkId = postId.substring(3);
         String parentId = postId;

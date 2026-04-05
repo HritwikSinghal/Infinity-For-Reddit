@@ -149,6 +149,9 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
     @Named("oauth")
     Retrofit mOauthRetrofit;
     @Inject
+    @Named("gql")
+    Retrofit mGqlRetrofit;
+    @Inject
     @Named("redgifs")
     Retrofit mRedgifsRetrofit;
     @Inject
@@ -646,7 +649,7 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
         setupMenu();
 
         mPostAdapter = new PostDetailRecyclerViewAdapter(mActivity,
-                this, mExecutor, mCustomThemeWrapper, mOauthRetrofit, mRetrofit,
+                this, mExecutor, mCustomThemeWrapper, mOauthRetrofit, mGqlRetrofit, mRetrofit,
                 mRedgifsRetrofit, mStreamableApiProvider, mRedditDataRoomDatabase, mGlide,
                 mSeparatePostAndComments, mActivity.accessToken, mActivity.accountName, mPost,
                 mLocale, mSharedPreferences, mCurrentAccountSharedPreferences,
@@ -657,7 +660,7 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
                     setupMenu();
                 });
         mCommentsAdapter = new CommentsRecyclerViewAdapter(mActivity,
-                this, mCustomThemeWrapper, mExecutor, mRetrofit, mOauthRetrofit,
+                this, mCustomThemeWrapper, mExecutor, mRetrofit, mOauthRetrofit, mGqlRetrofit,
                 mActivity.accessToken, mActivity.accountName, mPost, mLocale, mSingleCommentId,
                 isSingleCommentThreadMode, mSharedPreferences, mNsfwAndSpoilerSharedPreferences,
                 new CommentsRecyclerViewAdapter.CommentRecyclerViewAdapterCallback() {

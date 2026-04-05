@@ -85,6 +85,7 @@ public class CommentsListingRecyclerViewAdapter extends PagedListAdapter<Comment
     private final BaseActivity mActivity;
     private final CommentsListingFragment mFragment;
     private final Retrofit mOauthRetrofit;
+    private final Retrofit mGqlRetrofit;
     private final Locale mLocale;
     private final EmoteCloseBracketInlineProcessor mEmoteCloseBracketInlineProcessor;
     private final EmotePlugin mEmotePlugin;
@@ -117,7 +118,7 @@ public class CommentsListingRecyclerViewAdapter extends PagedListAdapter<Comment
     private final RetryLoadingMoreCallback mRetryLoadingMoreCallback;
 
     public CommentsListingRecyclerViewAdapter(BaseActivity activity, CommentsListingFragment fragment,
-                                              Retrofit oauthRetrofit,
+                                              Retrofit oauthRetrofit, Retrofit gqlRetrofit,
                                               CustomThemeWrapper customThemeWrapper, Locale locale,
                                               SharedPreferences sharedPreferences, String accessToken,
                                               @NonNull String accountName, String username,
@@ -126,6 +127,7 @@ public class CommentsListingRecyclerViewAdapter extends PagedListAdapter<Comment
         mActivity = activity;
         mFragment = fragment;
         mOauthRetrofit = oauthRetrofit;
+        mGqlRetrofit = gqlRetrofit;
         mCommentColor = customThemeWrapper.getCommentColor();
         int commentSpoilerBackgroundColor = mCommentColor | 0xFF000000;
         mLocale = locale;
@@ -646,7 +648,7 @@ public class CommentsListingRecyclerViewAdapter extends PagedListAdapter<Comment
                                 comment.getScore() + comment.getVoteType()));
                     }
 
-                    VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
+                    VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
                         @Override
                         public void onVoteThingSuccess(int position1) {
                             int currentPosition = getBindingAdapterPosition();
@@ -726,7 +728,7 @@ public class CommentsListingRecyclerViewAdapter extends PagedListAdapter<Comment
                                 comment.getScore() + comment.getVoteType()));
                     }
 
-                    VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
+                    VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
                         @Override
                         public void onVoteThingSuccess(int position1) {
                             int currentPosition = getBindingAdapterPosition();

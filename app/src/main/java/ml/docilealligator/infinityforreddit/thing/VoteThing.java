@@ -5,6 +5,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONObject;
+
 import ml.docilealligator.infinityforreddit.apis.GqlAPI;
 import ml.docilealligator.infinityforreddit.apis.GqlRequestBody;
 import ml.docilealligator.infinityforreddit.utils.APIUtils;
@@ -23,10 +25,10 @@ public class VoteThing {
         return id.startsWith("t3_");
     }
 
-    public static void voteThing(Context context, final Retrofit retrofit, String accessToken,
+    public static void voteThing(Context context, final Retrofit gqlRetrofit, String accessToken,
                                  final VoteThingListener voteThingListener, final String fullName,
                                  final String point, final int position) {
-        GqlAPI api = retrofit.create(GqlAPI.class);
+        GqlAPI api = gqlRetrofit.create(GqlAPI.class);
         Call<String> voteThingCall;
 
         if (isPost(fullName)) {
@@ -41,6 +43,15 @@ public class VoteThing {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull retrofit2.Response<String> response) {
                 if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(response.body());
+                        if (!json.isNull("errors")) {
+                            voteThingListener.onVoteThingFail(position);
+                            Toast.makeText(context, json.getJSONArray("errors").getJSONObject(0).getString("message"), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
                     voteThingListener.onVoteThingSuccess(position);
                 } else {
                     voteThingListener.onVoteThingFail(position);
@@ -56,10 +67,10 @@ public class VoteThing {
         });
     }
 
-    public static void voteThing(Context context, final Retrofit retrofit, String accessToken,
+    public static void voteThing(Context context, final Retrofit gqlRetrofit, String accessToken,
                                  final VoteThingWithoutPositionListener voteThingWithoutPositionListener,
                                  final String fullName, final String point) {
-        GqlAPI api = retrofit.create(GqlAPI.class);
+        GqlAPI api = gqlRetrofit.create(GqlAPI.class);
         Call<String> voteThingCall;
 
         if (isPost(fullName)) {
@@ -74,6 +85,15 @@ public class VoteThing {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull retrofit2.Response<String> response) {
                 if (response.isSuccessful()) {
+                    try {
+                        JSONObject json = new JSONObject(response.body());
+                        if (!json.isNull("errors")) {
+                            voteThingWithoutPositionListener.onVoteThingFail();
+                            Toast.makeText(context, json.getJSONArray("errors").getJSONObject(0).getString("message"), Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                    } catch (Exception ignored) {
+                    }
                     voteThingWithoutPositionListener.onVoteThingSuccess();
                 } else {
                     voteThingWithoutPositionListener.onVoteThingFail();

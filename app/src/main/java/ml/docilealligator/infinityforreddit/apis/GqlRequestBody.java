@@ -4,10 +4,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import ml.docilealligator.infinityforreddit.utils.APIUtils;
 import okhttp3.RequestBody;
 
@@ -199,13 +195,4 @@ public class GqlRequestBody {
         return data;
     }
 
-    public static long getUnixTime(String timestamp) {
-        String pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ";
-        SimpleDateFormat formatter = new SimpleDateFormat(pattern);
-        try {
-            return formatter.parse(timestamp).getTime();
-        } catch (ParseException e) {
-            return new Date().getTime();
-        }
-    }
 }

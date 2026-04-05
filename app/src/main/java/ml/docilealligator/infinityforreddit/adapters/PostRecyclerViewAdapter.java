@@ -186,6 +186,7 @@ public class PostRecyclerViewAdapter extends PagingDataAdapter<Post, RecyclerVie
     private RedditDataRoomDatabase mRedditDataRoomDatabase;
     private Executor mExecutor;
     private Retrofit mOauthRetrofit;
+    private Retrofit mGqlRetrofit;
     private Retrofit mRedgifsRetrofit;
     private Provider<StreamableAPI> mStreamableApiProvider;
     private String mAccessToken;
@@ -282,7 +283,7 @@ public class PostRecyclerViewAdapter extends PagingDataAdapter<Post, RecyclerVie
 
     // postHistorySharedPreferences will be null when being used in HistoryPostFragment.
     public PostRecyclerViewAdapter(BaseActivity activity, PostFragmentBase fragment, RedditDataRoomDatabase redditDataRoomDatabase,
-                                   Executor executor, Retrofit oauthRetrofit,
+                                   Executor executor, Retrofit oauthRetrofit, Retrofit gqlRetrofit,
                                    Retrofit redgifsRetrofit, Provider<StreamableAPI> streamableApiProvider,
                                    CustomThemeWrapper customThemeWrapper, Locale locale,
                                    @Nullable String accessToken, @NonNull String accountName, @PostType int postType,
@@ -300,6 +301,7 @@ public class PostRecyclerViewAdapter extends PagingDataAdapter<Post, RecyclerVie
             mRedditDataRoomDatabase = redditDataRoomDatabase;
             mExecutor = executor;
             mOauthRetrofit = oauthRetrofit;
+            mGqlRetrofit = gqlRetrofit;
             mRedgifsRetrofit = redgifsRetrofit;
             mStreamableApiProvider = streamableApiProvider;
             mAccessToken = accessToken;
@@ -2232,7 +2234,7 @@ public class PostRecyclerViewAdapter extends PagingDataAdapter<Post, RecyclerVie
                         }
                     }
 
-                    VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
+                    VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
                         @Override
                         public void onVoteThingSuccess(int position1) {
                             int currentPosition = getBindingAdapterPosition();
@@ -2346,7 +2348,7 @@ public class PostRecyclerViewAdapter extends PagingDataAdapter<Post, RecyclerVie
                         }
                     }
 
-                    VoteThing.voteThing(mActivity, mOauthRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
+                    VoteThing.voteThing(mActivity, mGqlRetrofit, mAccessToken, new VoteThing.VoteThingListener() {
                         @Override
                         public void onVoteThingSuccess(int position1) {
                             int currentPosition = getBindingAdapterPosition();

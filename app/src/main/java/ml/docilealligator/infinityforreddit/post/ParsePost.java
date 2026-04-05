@@ -12,8 +12,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -928,7 +926,7 @@ public class ParsePost {
         String[] permalinkSplit = data.getString("permalink").split("/");
         String subredditName = permalinkSplit[2];
         String subredditNamePrefixed = permalinkSplit[1] + "/" + permalinkSplit[2];
-        String author = data.getJSONObject("authorInfo").getString("name");
+        String author = data.isNull("authorInfo") ? "[deleted]" : data.getJSONObject("authorInfo").getString("name");
 
         StringBuilder authorFlairHTMLBuilder = new StringBuilder();
         if (!data.isNull("authorFlair") && !data.getJSONObject("authorFlair").isNull("richtext")) {
@@ -1201,7 +1199,7 @@ public class ParsePost {
                 if (!galleryItem.isNull(JSONUtils.CAPTION_KEY)) {
                     galleryItemCaption = galleryItem.getString(JSONUtils.CAPTION_KEY).trim();
                 }
-                if (!galleryItem.isNull(JSONUtils.CAPTION_URL_KEY)) {
+                if (!galleryItem.isNull("outboundUrl")) {
                     galleryItemCaptionUrl = galleryItem.getString("outboundUrl").trim();
                 }
 
@@ -1321,10 +1319,9 @@ public class ParsePost {
     }
 
     public static long getUnixTime(String timestamp) {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ");
         try {
-            return formatter.parse(timestamp).getTime();
-        } catch (ParseException e) {
+            return java.time.OffsetDateTime.parse(timestamp).toInstant().toEpochMilli();
+        } catch (Exception e) {
             return new Date().getTime();
         }
     }
