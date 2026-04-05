@@ -2,7 +2,7 @@
 
 ## Context
 
-Reddit's paid API changes broke many third-party apps. The fork at `~/Projects/Infinity-For-Reddit` added GraphQL support via Reddit's `gql-fed.reddit.com` federated endpoint, allowing authenticated users to use the GQL API while anonymous users continue using the REST `.json` endpoints. This plan ports **only the GQL-related changes** from that fork into the current codebase (`~/test/Infinity-For-Reddit`), ignoring unrelated changes (Matrix chat, Giphy, dependency downgrades, removed features, etc.).
+Reddit's paid API changes broke many third-party apps. A reference fork had already implemented GraphQL support via Reddit's `gql-fed.reddit.com` federated endpoint, allowing authenticated users to use the GQL API while anonymous users continue using the REST `.json` endpoints. This plan ports **only the GQL-related changes** from that fork into this codebase (`~/Projects/Infinity-For-Reddit`), ignoring unrelated changes (Matrix chat, Giphy, dependency downgrades, removed features, etc.).
 
 **Architecture pattern:** Dual-path routing — authenticated users → GQL, anonymous users → REST. No new library dependencies needed; GQL is implemented via manual JSON request/response construction over Retrofit.
 

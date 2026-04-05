@@ -1,4 +1,4 @@
-# Layer 3.1 — ParsePost GQL Methods
+# ParsePost GQL Methods
 
 ## Purpose
 
