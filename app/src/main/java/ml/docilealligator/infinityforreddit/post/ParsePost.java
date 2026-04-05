@@ -12,7 +12,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -839,6 +843,490 @@ public class ParsePost {
 
         post.setMediaMetadataMap(mediaMetadataMap);
         return post;
+    }
+
+    @WorkerThread
+    @Nullable
+    public static LinkedHashSet<Post> parsePostsSyncGQL(String response, int nPosts, PostFilter postFilter, @Nullable ReadPostsListInterface readPostsList) {
+        LinkedHashSet<Post> newPosts = new LinkedHashSet<>();
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            JSONArray allData;
+
+            if (jsonResponse.getJSONObject(JSONUtils.DATA_KEY).has("search")) {
+                allData = jsonResponse.getJSONObject(JSONUtils.DATA_KEY)
+                        .getJSONObject("search").getJSONObject("general")
+                        .getJSONObject("posts").getJSONArray("edges");
+            } else {
+                allData = jsonResponse.getJSONObject(JSONUtils.DATA_KEY)
+                        .getJSONObject("postFeed").getJSONObject("elements")
+                        .getJSONArray("edges");
+            }
+
+            int size = (nPosts < 0 || nPosts > allData.length()) ? allData.length() : nPosts;
+
+            ArrayList<String> newPostsIds = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                try {
+                    JSONObject data = allData.getJSONObject(i).getJSONObject("node");
+                    String typename = data.getString("__typename");
+                    if (!typename.equals("SubredditPost") && !typename.equals("ProfilePost")) {
+                        continue;
+                    }
+                    Post post = parseBasicDataGQL(data);
+                    if (PostFilter.isPostAllowed(post, postFilter)) {
+                        newPosts.add(post);
+                        newPostsIds.add(post.getId());
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (readPostsList != null) {
+                Set<String> readPostsIds = readPostsList.getReadPostsIdsByIds(newPostsIds);
+                for (Post post : newPosts) {
+                    if (readPostsIds.contains(post.getId())) {
+                        post.markAsRead();
+                    }
+                }
+            }
+
+            return newPosts;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String getLastItemGQL(String response) {
+        try {
+            JSONObject data = new JSONObject(response).getJSONObject(JSONUtils.DATA_KEY);
+            JSONObject pageInfo;
+
+            if (data.has("search")) {
+                pageInfo = data.getJSONObject("search").getJSONObject("general")
+                        .getJSONObject("posts").getJSONObject("pageInfo");
+            } else {
+                pageInfo = data.getJSONObject("postFeed").getJSONObject("elements")
+                        .getJSONObject("pageInfo");
+            }
+
+            if (!pageInfo.getBoolean("hasNextPage") || pageInfo.isNull("endCursor")) {
+                return null;
+            }
+            return pageInfo.getString("endCursor");
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static Post parseBasicDataGQL(JSONObject data) throws JSONException {
+        String fullName = data.getString(JSONUtils.ID_KEY);
+        String id = fullName.replace("t3_", "");
+        String[] permalinkSplit = data.getString("permalink").split("/");
+        String subredditName = permalinkSplit[2];
+        String subredditNamePrefixed = permalinkSplit[1] + "/" + permalinkSplit[2];
+        String author = data.getJSONObject("authorInfo").getString("name");
+
+        StringBuilder authorFlairHTMLBuilder = new StringBuilder();
+        if (!data.isNull("authorFlair") && !data.getJSONObject("authorFlair").isNull("richtext")) {
+            JSONArray flairArray = new JSONArray(data.getJSONObject("authorFlair").getString("richtext"));
+            for (int i = 0; i < flairArray.length(); i++) {
+                JSONObject flairObject = flairArray.getJSONObject(i);
+                String e = flairObject.getString(JSONUtils.E_KEY);
+                if (e.equals("text")) {
+                    authorFlairHTMLBuilder.append(flairObject.getString(JSONUtils.T_KEY));
+                } else if (e.equals("emoji")) {
+                    authorFlairHTMLBuilder.append("<img src=\"").append(Html.escapeHtml(flairObject.getString(JSONUtils.U_KEY))).append("\">");
+                }
+            }
+        }
+        String authorFlair = "";
+        if (!data.isNull("authorFlair")) {
+            JSONObject authorFlairObj = data.getJSONObject("authorFlair");
+            if (!authorFlairObj.isNull("text")) {
+                authorFlair = authorFlairObj.getString("text");
+            }
+        }
+
+        String distinguished = data.has("distinguishedAs") ? data.getString("distinguishedAs") : "";
+        String suggestedSort = (data.has("suggestedCommentSort") && !data.isNull("suggestedCommentSort"))
+                ? data.getString("suggestedCommentSort") : null;
+        long postTime = getUnixTime(data.getString("createdAt"));
+        String title = data.getString(JSONUtils.TITLE_KEY);
+        int score = data.isNull(JSONUtils.SCORE_KEY) ? 0 : (int) data.getDouble(JSONUtils.SCORE_KEY);
+        int nComments = data.getInt("commentCount");
+        int upvoteRatio = (int) (data.getDouble("upvoteRatio") * 100);
+        boolean hidden = data.getBoolean("isHidden");
+        boolean spoiler = data.getBoolean("isSpoiler");
+        boolean nsfw = data.getBoolean("isNsfw");
+        boolean stickied = data.getBoolean("isStickied");
+        boolean archived = data.getBoolean("isArchived");
+        boolean locked = data.getBoolean("isLocked");
+        boolean saved = data.getBoolean("isSaved");
+
+        StringBuilder postFlairHTMLBuilder = new StringBuilder();
+        String flair = "";
+        if (!data.isNull("flair") && !data.getJSONObject("flair").isNull("richtext")) {
+            JSONArray flairArray = new JSONArray(data.getJSONObject("flair").getString("richtext"));
+            for (int i = 0; i < flairArray.length(); i++) {
+                JSONObject flairObject = flairArray.getJSONObject(i);
+                String e = flairObject.getString(JSONUtils.E_KEY);
+                if (e.equals("text")) {
+                    postFlairHTMLBuilder.append(Html.escapeHtml(flairObject.getString(JSONUtils.T_KEY)));
+                } else if (e.equals("emoji")) {
+                    postFlairHTMLBuilder.append("<img src=\"").append(Html.escapeHtml(flairObject.getString(JSONUtils.U_KEY))).append("\">");
+                }
+            }
+            flair = postFlairHTMLBuilder.toString();
+        }
+        if (flair.isEmpty() && !data.isNull("flair") && !data.getJSONObject("flair").isNull("text")) {
+            flair = data.getJSONObject("flair").getString("text");
+        }
+
+        int voteType;
+        switch (data.getString("voteState")) {
+            case "UP":   voteType =  1; break;
+            case "DOWN": voteType = -1; break;
+            default:     voteType =  0; break;
+        }
+
+        String permalink = Html.fromHtml(data.getString(JSONUtils.PERMALINK_KEY)).toString();
+
+        ArrayList<Post.Preview> previews = new ArrayList<>();
+        if (!data.isNull("media")) {
+            JSONObject media = data.getJSONObject(JSONUtils.MEDIA_KEY);
+            if (!media.isNull("still")) {
+                JSONObject images = media.getJSONObject("still");
+                JSONObject source = images.getJSONObject(JSONUtils.SOURCE_KEY);
+                String previewUrl = source.getString(JSONUtils.URL_KEY);
+                int previewWidth = source.getJSONObject("dimensions").getInt(JSONUtils.WIDTH_KEY);
+                int previewHeight = source.getJSONObject("dimensions").getInt(JSONUtils.HEIGHT_KEY);
+                previews.add(new Post.Preview(previewUrl, previewWidth, previewHeight, "", ""));
+
+                String[] resolutions = {"small", "medium", "large", "xlarge", "xxlarge", "xxxlarge"};
+                for (String res : resolutions) {
+                    if (images.isNull(res)) continue;
+                    JSONObject thumbnailPreview = images.getJSONObject(res);
+                    String thumbnailPreviewUrl = thumbnailPreview.getString(JSONUtils.URL_KEY);
+                    int thumbnailPreviewWidth = thumbnailPreview.getJSONObject("dimensions").getInt(JSONUtils.WIDTH_KEY);
+                    int thumbnailPreviewHeight = thumbnailPreview.getJSONObject("dimensions").getInt(JSONUtils.HEIGHT_KEY);
+                    previews.add(new Post.Preview(thumbnailPreviewUrl, thumbnailPreviewWidth, thumbnailPreviewHeight, "", ""));
+                }
+            } else if (!media.isNull("thumbnail")) {
+                JSONObject thumbnail = media.getJSONObject("thumbnail");
+                String thumbnailPreviewUrl = thumbnail.getString("url");
+                int thumbnailPreviewWidth = thumbnail.getJSONObject("dimensions").getInt("width");
+                int thumbnailPreviewHeight = thumbnail.getJSONObject("dimensions").getInt("height");
+                previews.add(new Post.Preview(thumbnailPreviewUrl, thumbnailPreviewWidth, thumbnailPreviewHeight, "", ""));
+            }
+        }
+
+        if (!data.isNull("crosspostRoot")) {
+            data = data.getJSONObject("crosspostRoot").getJSONObject("post");
+            Post crosspostParent = parseBasicDataGQL(data);
+            Post post = parseDataGQL(data, permalink, id, fullName, subredditName, subredditNamePrefixed,
+                    author, authorFlair, authorFlairHTMLBuilder.toString(),
+                    postTime, title, previews,
+                    score, voteType, nComments, upvoteRatio, flair, hidden,
+                    spoiler, nsfw, stickied, archived, locked, saved, true,
+                    distinguished, suggestedSort);
+            post.setCrosspostParentId(crosspostParent.getId());
+            return post;
+        } else {
+            return parseDataGQL(data, permalink, id, fullName, subredditName, subredditNamePrefixed,
+                    author, authorFlair, authorFlairHTMLBuilder.toString(),
+                    postTime, title, previews,
+                    score, voteType, nComments, upvoteRatio, flair, hidden,
+                    spoiler, nsfw, stickied, archived, locked, saved, false,
+                    distinguished, suggestedSort);
+        }
+    }
+
+    private static Post parseDataGQL(JSONObject data, String permalink, String id, String fullName,
+            String subredditName, String subredditNamePrefixed, String author,
+            String authorFlair, String authorFlairHTML,
+            long postTimeMillis, String title, ArrayList<Post.Preview> previews,
+            int score, int voteType, int nComments, int upvoteRatio, String flair,
+            boolean hidden, boolean spoiler, boolean nsfw, boolean stickied, boolean archived,
+            boolean locked, boolean saved, boolean isCrosspost,
+            String distinguished, String suggestedSort) throws JSONException {
+        Post post;
+
+        String url = Html.fromHtml(data.getString(JSONUtils.URL_KEY)).toString();
+
+        if (data.getBoolean("isSelfPost")) {
+            post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                    authorFlair, authorFlairHTML, postTimeMillis, title, permalink, score, Post.TEXT_TYPE,
+                    voteType, nComments, upvoteRatio, flair, hidden, spoiler, nsfw,
+                    stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                    false, false, distinguished, suggestedSort);
+            if (!previews.isEmpty()) {
+                post.setPreviews(previews);
+            }
+            setText(post, data);
+
+        } else if (data.getString("postHint").equals("IMAGE")) {
+            if (!data.getJSONObject("media").isNull("typeHint")
+                    && data.getJSONObject(JSONUtils.MEDIA_KEY).getString("typeHint").equals("GIFVIDEO")) {
+                JSONObject redditVideoObject = data.getJSONObject(JSONUtils.MEDIA_KEY)
+                        .getJSONObject("animated").getJSONObject("mp4_source");
+                String videoUrl = Html.fromHtml(redditVideoObject.getString("url")).toString();
+
+                post = new Post(id, fullName, subredditName, subredditNamePrefixed, author, authorFlair,
+                        authorFlairHTML, postTimeMillis, title, permalink, score, Post.VIDEO_TYPE, voteType,
+                        nComments, upvoteRatio, flair, hidden, spoiler, nsfw, stickied,
+                        archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                        false, false, distinguished, suggestedSort);
+                post.setPreviews(previews);
+                post.setVideoUrl(videoUrl);
+                post.setVideoDownloadUrl(videoUrl);
+                if (!data.isNull("content")) {
+                    setText(post, data);
+                }
+                return post;
+            }
+
+            String srcUrl = url;
+            if (data.getString("domain").contains("imgur")) {
+                srcUrl = data.getJSONObject("media").getJSONObject("still")
+                        .getJSONObject("source").getString("url");
+            }
+
+            post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                    authorFlair, authorFlairHTML, postTimeMillis, title, srcUrl, permalink, score, Post.IMAGE_TYPE,
+                    voteType, nComments, upvoteRatio, flair, hidden, spoiler, nsfw,
+                    stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                    false, false, distinguished, suggestedSort);
+            if (previews.isEmpty()) {
+                previews.add(new Post.Preview(srcUrl, 0, 0, "", ""));
+            }
+            post.setPreviews(previews);
+            if (!data.isNull("content")) {
+                setText(post, data);
+            }
+
+        } else if (data.getString("postHint").equals("HOSTED_VIDEO") || data.getString("postHint").equals("RICH_VIDEO")) {
+            if (data.getString("domain").contains("youtu") || data.getString("domain").contains("streamable")) {
+                post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                        authorFlair, authorFlairHTML, postTimeMillis, title, url, permalink, score,
+                        Post.LINK_TYPE, voteType, nComments, upvoteRatio, flair, hidden,
+                        spoiler, nsfw, stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                        false, false, distinguished, suggestedSort);
+                if (!previews.isEmpty()) {
+                    post.setPreviews(previews);
+                }
+                return post;
+            }
+
+            JSONObject streaming = data.getJSONObject(JSONUtils.MEDIA_KEY).getJSONObject("streaming");
+            String videoUrl = Html.fromHtml(streaming.getString("dashUrl")).toString();
+            String videoDownloadUrl = data.getJSONObject(JSONUtils.MEDIA_KEY).getJSONObject("download").getString("url");
+
+            post = new Post(id, fullName, subredditName, subredditNamePrefixed, author, authorFlair,
+                    authorFlairHTML, postTimeMillis, title, permalink, score, Post.VIDEO_TYPE, voteType,
+                    nComments, upvoteRatio, flair, hidden, spoiler, nsfw, stickied,
+                    archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                    false, false, distinguished, suggestedSort);
+
+            if (data.getString("domain").contains("redgifs")) {
+                Pattern rgPattern = Pattern.compile("redgifs\\.com/watch/([a-z]+)");
+                Matcher m = rgPattern.matcher(url);
+                if (m.find()) {
+                    post.setIsRedgifs(true);
+                    post.setRedgifsId(m.group(1));
+                }
+            }
+
+            post.setPreviews(previews);
+            post.setVideoUrl(videoUrl);
+            post.setVideoDownloadUrl(videoDownloadUrl);
+            if (!data.isNull("content")) {
+                setText(post, data);
+            }
+
+        } else if (data.getString("postHint").equals("LINK")) {
+            if (!data.isNull(JSONUtils.MEDIA_KEY) && !data.getJSONObject(JSONUtils.MEDIA_KEY).isNull("streaming")) {
+                JSONObject streaming = data.getJSONObject(JSONUtils.MEDIA_KEY).getJSONObject("streaming");
+                String videoUrl = Html.fromHtml(streaming.getString("dashUrl")).toString();
+                String videoDownloadUrl = data.getJSONObject(JSONUtils.MEDIA_KEY).getJSONObject("download").getString("url");
+
+                post = new Post(id, fullName, subredditName, subredditNamePrefixed, author, authorFlair,
+                        authorFlairHTML, postTimeMillis, title, permalink, score, Post.VIDEO_TYPE, voteType,
+                        nComments, upvoteRatio, flair, hidden, spoiler, nsfw, stickied,
+                        archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                        false, false, distinguished, suggestedSort);
+                post.setPreviews(previews);
+                post.setVideoUrl(videoUrl);
+                post.setVideoDownloadUrl(videoDownloadUrl);
+                return post;
+            }
+
+            if (previews.isEmpty()) {
+                post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                        authorFlair, authorFlairHTML, postTimeMillis, title, url, permalink, score,
+                        Post.NO_PREVIEW_LINK_TYPE, voteType, nComments, upvoteRatio, flair, hidden,
+                        spoiler, nsfw, stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                        false, false, distinguished, suggestedSort);
+            } else {
+                post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                        authorFlair, authorFlairHTML, postTimeMillis, title, url, permalink, score,
+                        Post.LINK_TYPE, voteType, nComments, upvoteRatio, flair, hidden,
+                        spoiler, nsfw, stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                        false, false, distinguished, suggestedSort);
+                post.setPreviews(previews);
+            }
+            setText(post, data);
+
+        } else if (!data.isNull("gallery")) {
+            post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                    authorFlair, authorFlairHTML, postTimeMillis, title, url, permalink, score,
+                    Post.LINK_TYPE, voteType, nComments, upvoteRatio, flair, hidden,
+                    spoiler, nsfw, stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                    false, false, distinguished, suggestedSort);
+
+            JSONArray galleryArray = data.getJSONObject("gallery").getJSONArray(JSONUtils.ITEMS_KEY);
+            ArrayList<Post.Gallery> gallery = new ArrayList<>();
+            for (int i = 0; i < galleryArray.length(); i++) {
+                JSONObject galleryItem = galleryArray.getJSONObject(i);
+                JSONObject mediaObject = galleryItem.getJSONObject("media");
+                String galleryId = mediaObject.getString("id");
+                String mimeType = mediaObject.getString("mimetype");
+                String galleryItemUrl = mediaObject.getString("url");
+
+                String galleryItemCaption = "";
+                String galleryItemCaptionUrl = "";
+                if (!galleryItem.isNull(JSONUtils.CAPTION_KEY)) {
+                    galleryItemCaption = galleryItem.getString(JSONUtils.CAPTION_KEY).trim();
+                }
+                if (!galleryItem.isNull(JSONUtils.CAPTION_URL_KEY)) {
+                    galleryItemCaptionUrl = galleryItem.getString("outboundUrl").trim();
+                }
+
+                String[] resolutions = {"small", "medium", "large", "xlarge", "xxlarge", "xxxlarge"};
+                for (String res : resolutions) {
+                    if (mediaObject.isNull(res)) continue;
+                    JSONObject thumbnailPreview = mediaObject.getJSONObject(res);
+                    String thumbnailPreviewUrl = thumbnailPreview.getString(JSONUtils.URL_KEY);
+                    int thumbnailPreviewWidth = thumbnailPreview.getJSONObject("dimensions").getInt(JSONUtils.WIDTH_KEY);
+                    int thumbnailPreviewHeight = thumbnailPreview.getJSONObject("dimensions").getInt(JSONUtils.HEIGHT_KEY);
+                    previews.add(new Post.Preview(thumbnailPreviewUrl, thumbnailPreviewWidth, thumbnailPreviewHeight, "", ""));
+                }
+
+                if (previews.isEmpty() && (mimeType.contains("jpg") || mimeType.contains("png"))) {
+                    previews.add(new Post.Preview(galleryItemUrl, mediaObject.getInt("width"),
+                            mediaObject.getInt("height"), galleryItemCaption, galleryItemCaptionUrl));
+                }
+
+                Post.Gallery postGalleryItem = new Post.Gallery(mimeType, galleryItemUrl, "",
+                        subredditName + "-" + galleryId + "." + mimeType.substring(mimeType.lastIndexOf("/") + 1),
+                        galleryItemCaption, galleryItemCaptionUrl);
+                if (!TextUtils.isEmpty(galleryItemUrl) && (mimeType.contains("jpg") || mimeType.contains("png"))) {
+                    postGalleryItem.setFallbackUrl("https://i.redd.it/" + galleryId + "." + mimeType.substring(mimeType.lastIndexOf("/") + 1));
+                    postGalleryItem.setHasFallback(true);
+                }
+                gallery.add(postGalleryItem);
+            }
+
+            if (!gallery.isEmpty()) {
+                post.setPostType(Post.GALLERY_TYPE);
+                post.setGallery(gallery);
+                post.setPreviews(previews);
+            }
+            if (!data.isNull("content")) {
+                setText(post, data);
+            }
+
+        } else {
+            int postType = previews.isEmpty() ? Post.NO_PREVIEW_LINK_TYPE : Post.LINK_TYPE;
+            post = new Post(id, fullName, subredditName, subredditNamePrefixed, author,
+                    authorFlair, authorFlairHTML, postTimeMillis, title, url, permalink, score,
+                    postType, voteType, nComments, upvoteRatio, flair, hidden,
+                    spoiler, nsfw, stickied, archived, locked, saved, false, isCrosspost, false, false, 0L, null,
+                    false, false, distinguished, suggestedSort);
+            setText(post, data);
+            if (!previews.isEmpty()) {
+                post.setPreviews(previews);
+            }
+        }
+
+        return post;
+    }
+
+    public static void setText(Post post, JSONObject data) {
+        try {
+            if (data.isNull("content")) {
+                post.setSelfText("");
+            } else {
+                JSONObject content = data.getJSONObject("content");
+                String selfText = insertImages(
+                        Utils.modifyMarkdown(Utils.trimTrailingWhitespace(content.getString("markdown"))),
+                        content.getJSONArray("richtextMedia"));
+                post.setSelfText(selfText);
+                if (content.isNull("html")) {
+                    post.setSelfTextPlainTrimmed("");
+                } else {
+                    String selfTextPlain = Utils.trimTrailingWhitespace(
+                            Html.fromHtml(content.getString("html"))).toString();
+                    post.setSelfTextPlain(selfTextPlain);
+                    if (selfTextPlain.length() > 250) {
+                        selfTextPlain = selfTextPlain.substring(0, 250);
+                    }
+                    if (!selfText.isEmpty()) {
+                        Pattern p = Pattern.compile(">!.+!<");
+                        Matcher m = p.matcher(selfText.substring(0, Math.min(selfText.length(), 400)));
+                        if (m.find()) {
+                            post.setSelfTextPlainTrimmed("");
+                        } else {
+                            post.setSelfTextPlainTrimmed(selfTextPlain);
+                        }
+                    } else {
+                        post.setSelfTextPlainTrimmed(selfTextPlain);
+                    }
+                }
+            }
+        } catch (JSONException e) {
+            post.setSelfTextPlainTrimmed("");
+        }
+    }
+
+    public static String insertImages(String content, JSONArray richtextMedia) {
+        Pattern patternImageLink = Pattern.compile("!\\[img\\]\\([^)]*\\)");
+        Pattern patternLink = Pattern.compile("\\([^)]*\\)");
+        Matcher matcher = patternImageLink.matcher(content);
+        Map<String, String> replace = new HashMap<>();
+        int i = 0;
+        while (matcher.find()) {
+            String imageLink = matcher.group();
+            Matcher matcher2 = patternLink.matcher(imageLink);
+            if (matcher2.find()) {
+                String linkContent = matcher2.group().replaceAll("[()]", "");
+                String[] parts = linkContent.split(" ");
+                String caption = parts.length > 1 ? parts[1].replace("\"", "") : "";
+                try {
+                    String imageUrl = richtextMedia.getJSONObject(i).getString("url");
+                    replace.put(imageLink, String.format("![%s](%s)", caption, imageUrl));
+                } catch (JSONException ignored) {
+                }
+            }
+            i++;
+        }
+        String value = content;
+        for (Map.Entry<String, String> entry : replace.entrySet()) {
+            value = value.replace(entry.getKey(), entry.getValue());
+        }
+        return value;
+    }
+
+    public static long getUnixTime(String timestamp) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ");
+        try {
+            return formatter.parse(timestamp).getTime();
+        } catch (ParseException e) {
+            return new Date().getTime();
+        }
     }
 
     @Nullable

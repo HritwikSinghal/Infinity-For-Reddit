@@ -124,6 +124,15 @@ public class APIUtils {
     public static final String REFERER_KEY = "Referer";
     public static final String REVEDDIT_REFERER = "https://www.reveddit.com/";
 
+    public static final String GQL_BASE_URL = "https://gql-fed.reddit.com";
+
+    public static final String VOTESTATE_UP = "UP";
+    public static final String VOTESTATE_NONE = "NONE";
+    public static final String VOTESTATE_DOWN = "DOWN";
+
+    public static final String ACTION_SUB = "SUBSCRIBED";
+    public static final String ACTION_UNSUB = "NONE";
+
     public static final String SPAM_KEY = "spam";
     public static final String HOW_KEY = "how";
     public static final String HOW_YES = "yes";
