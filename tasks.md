@@ -1,5 +1,5 @@
 # Tasks
-Porting GraphQL support from fork (`~/Projects/Infinity-For-Reddit`) into this repo. See `GRAPHQL.md` for full plan.
+Implementing GraphQL support in this repo (`gql` branch). See `doc/GRAPHQL.md` for full plan.
 
 ## Completed
 
@@ -22,12 +22,12 @@ Porting GraphQL support from fork (`~/Projects/Infinity-For-Reddit`) into this r
 - **Reference:** Fork file `~/Projects/.../post/ParsePost.java` lines 77-1322
 
 ### 3.2 — `comment/ParseComment.java`
-- [ ] Add `parseCommentGQL()` — entry point, parses `data.postInfoById.commentForest.trees[]`
-- [ ] Add `parseMoreCommentGQL()` — for "load more" responses
-- [ ] Add `parseCommentRecursionGQL()` — flat tree with `__typename` discrimination
-- [ ] Add `parseMoreCommentRecursionGQL()` — same but for pagination
-- [ ] Add `parseSingleCommentGQL()` — single comment from GQL node
-- [ ] Add `createDeletedComment()` — placeholder for deleted comments
+- [x] Add `parseCommentGQL()` — entry point, parses `data.postInfoById.commentForest.trees[]`
+- [x] Add `parseMoreCommentGQL()` — for "load more" responses
+- [x] Add `parseCommentRecursionGQL()` — flat tree with `__typename` discrimination
+- [x] Add `parseMoreCommentRecursionGQL()` — same but for pagination
+- [x] Add `parseSingleCommentGQL()` — single comment from GQL node
+- [x] Add `createDeletedComment()` — placeholder for deleted comments
 - **Note:** GQL methods skip `CommentFilter` for now (REST path keeps it)
 - **Reference:** Fork file `~/Projects/.../comment/ParseComment.java` lines 61-719
 
